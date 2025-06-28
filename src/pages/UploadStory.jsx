@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Editor } from '@tinymce/tinymce-react';
 import axios from '../api/axios';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -7,98 +8,58 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Progress } from '@/components/ui/progress';
-import { Loader2, Upload, FileText, CheckCircle, X } from 'lucide-react';
+import { Loader2, Upload, FileText, CheckCircle, Sparkles } from 'lucide-react';
 
 const UploadStory = () => {
-  const user = JSON.parse(localStorage.getItem('user'));
-  const token = localStorage.getItem('token');
   const navigate = useNavigate();
+  const token = localStorage.getItem('token');
 
-  const [form, setForm] = useState({ title: '', genre: '', description: '' });
-  const [file, setFile] = useState(null);
+  const [form, setForm] = useState({
+    title: '',
+    genre: '',
+    description: '',
+    content: ''
+  });
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
 
   const handleChange = e => {
-    setForm({ ...form, [e.target.name]: e.target.value });
+    setForm(prev => ({ ...prev, [e.target.name]: e.target.value }));
     if (error) setError('');
   };
 
-  const handleFileChange = (e) => {
-    const selectedFile = e.target.files[0];
-    if (selectedFile) {
-      // Validate file type
-      const allowedTypes = ['.pdf', '.doc', '.docx'];
-      const fileExtension = selectedFile.name.toLowerCase().substring(selectedFile.name.lastIndexOf('.'));
-      
-      if (!allowedTypes.includes(fileExtension)) {
-        setError('Please select a valid file type (PDF, DOC, or DOCX)');
-        return;
-      }
-      
-      // Validate file size (max 10MB)
-      if (selectedFile.size > 10 * 1024 * 1024) {
-        setError('File size must be less than 10MB');
-        return;
-      }
-      
-      setFile(selectedFile);
-      setError('');
-    }
-  };
-
-  const removeFile = () => {
-    setFile(null);
-    document.getElementById('file-input').value = '';
+  const handleEditorChange = (content) => {
+    setForm(prev => ({ ...prev, content }));
+    if (error) setError('');
   };
 
   const handleSubmit = async e => {
     e.preventDefault();
-    
-    if (!form.title.trim() || !form.genre.trim() || !form.description.trim()) {
-      setError('Please fill in all fields');
-      return;
-    }
-    
-    if (!file) {
-      setError('Please select a file to upload');
+    const { title, genre, description, content } = form;
+
+    if (!title.trim() || !genre.trim() || !description.trim() || !content.trim()) {
+      setError('All fields are required');
       return;
     }
 
     setLoading(true);
     setError('');
-    setUploadProgress(0);
-
-    const formData = new FormData();
-    Object.keys(form).forEach(key => formData.append(key, form[key]));
-    formData.append('storyFile', file);
 
     try {
-      await axios.post('/stories/upload', formData, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'multipart/form-data'
-        },
-        onUploadProgress: (progressEvent) => {
-          const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-          setUploadProgress(progress);
-        }
+      await axios.post('/stories/upload', form, {
+        headers: { Authorization: `Bearer ${token}` }
       });
-      
+
       setSuccess(true);
-      setForm({ title: '', genre: '', description: '' });
-      setFile(null);
-      document.getElementById('file-input').value = '';
-      
+      setForm({ title: '', genre: '', description: '', content: '' });
+
       setTimeout(() => {
         navigate('/');
       }, 2000);
     } catch (err) {
       setError(err.response?.data?.message || 'Upload failed');
-      setUploadProgress(0);
     } finally {
       setLoading(false);
     }
@@ -106,197 +67,162 @@ const UploadStory = () => {
 
   if (success) {
     return (
-      <div className="max-w-2xl mx-auto mt-10 p-6">
-        <Card className="text-center">
-          <CardContent className="pt-6">
-            <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
-            <CardTitle className="text-2xl mb-2">Story Uploaded Successfully!</CardTitle>
-            <CardDescription className="mb-4">
-              Your story has been uploaded and is now available for readers. Redirecting to home...
-            </CardDescription>
-            <div className="flex justify-center">
-              <Loader2 className="h-6 w-6 animate-spin" />
-            </div>
-          </CardContent>
-        </Card>
+      <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-emerald-50 flex items-center justify-center">
+        <div className="max-w-md mx-auto p-6">
+          <Card className="text-center shadow-2xl border-0 bg-white/90 backdrop-blur-sm">
+            <CardContent className="pt-12 pb-8">
+              <div className="w-20 h-20 bg-gradient-to-br from-green-500 to-emerald-500 rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg">
+                <CheckCircle className="h-10 w-10 text-white" />
+              </div>
+              <CardTitle className="text-2xl mb-4 text-gray-900">Story Published!</CardTitle>
+              <CardDescription className="mb-6 text-lg text-gray-600">
+                Your story has been successfully published and is now live for everyone to read.
+              </CardDescription>
+              <div className="flex items-center justify-center gap-2 text-emerald-600">
+                <Loader2 className="h-5 w-5 animate-spin" />
+                <span className="text-sm font-medium">Redirecting to home...</span>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="max-w-2xl mx-auto mt-8 p-6">
-      <div className="text-center mb-8">
-        <div className="flex items-center justify-center mb-4">
-          <Upload className="h-12 w-12 text-blue-600" />
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-pink-50">
+      <div className="max-w-4xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+        {/* Hero Section */}
+        <div className="text-center mb-12">
+          <div className="flex items-center justify-center mb-6">
+            <div className="w-16 h-16 bg-gradient-to-br from-purple-600 to-pink-600 rounded-2xl flex items-center justify-center shadow-lg">
+              <Upload className="h-8 w-8 text-white" />
+            </div>
+          </div>
+          <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent mb-4">
+            Write a New Story
+          </h1>
+          <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+            Share your creativity and inspire others with your unique storytelling
+          </p>
         </div>
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Upload New Story</h1>
-        <p className="text-gray-600">Share your story with the community</p>
-      </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <FileText className="h-5 w-5" />
-            Story Details
-          </CardTitle>
-          <CardDescription>
-            Fill in the details about your story and upload the document file.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {error && (
-              <Alert className="border-red-200 bg-red-50">
-                <AlertDescription className="text-red-800">
-                  {error}
-                </AlertDescription>
-              </Alert>
-            )}
-
-            <div className="space-y-2">
-              <Label htmlFor="title">Story Title *</Label>
-              <Input
-                id="title"
-                name="title"
-                placeholder="Enter your story title"
-                value={form.title}
-                onChange={handleChange}
-                disabled={loading}
-                required
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="genre">Genre *</Label>
-              <Input
-                id="genre"
-                name="genre"
-                placeholder="e.g., Fantasy, Romance, Mystery, Sci-Fi"
-                value={form.genre}
-                onChange={handleChange}
-                disabled={loading}
-                required
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="description">Description *</Label>
-              <Textarea
-                id="description"
-                name="description"
-                rows={4}
-                placeholder="Write a compelling description of your story..."
-                value={form.description}
-                onChange={handleChange}
-                disabled={loading}
-                required
-                className="resize-none"
-              />
-              <p className="text-xs text-gray-500">
-                {form.description.length}/500 characters
-              </p>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="file-input">Story File *</Label>
-              <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-gray-400 transition-colors">
-                {!file ? (
-                  <>
-                    <Upload className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-                    <p className="text-sm text-gray-600 mb-2">
-                      Click to upload or drag and drop
-                    </p>
-                    <p className="text-xs text-gray-500">
-                      PDF, DOC, or DOCX (max 10MB)
-                    </p>
-                    <Input
-                      id="file-input"
-                      type="file"
-                      accept=".pdf,.doc,.docx"
-                      onChange={handleFileChange}
-                      disabled={loading}
-                      className="mt-2"
-                    />
-                  </>
-                ) : (
-                  <div className="flex items-center justify-between bg-gray-50 p-3 rounded">
-                    <div className="flex items-center gap-2">
-                      <FileText className="h-4 w-4 text-blue-600" />
-                      <span className="text-sm font-medium">{file.name}</span>
-                      <span className="text-xs text-gray-500">
-                        ({(file.size / 1024 / 1024).toFixed(2)} MB)
-                      </span>
-                    </div>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={removeFile}
-                      disabled={loading}
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </div>
-                )}
+        <Card className="shadow-2xl border-0 bg-white/80 backdrop-blur-sm overflow-hidden">
+          <CardHeader className="bg-gradient-to-r from-purple-600 to-pink-600 text-white">
+            <CardTitle className="flex items-center gap-3 text-2xl">
+              <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
+                <FileText className="h-5 w-5" />
               </div>
-            </div>
+              Story Details
+            </CardTitle>
+            <CardDescription className="text-purple-100 text-lg">
+              Fill in the details below to publish your masterpiece
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="p-8">
+            <form onSubmit={handleSubmit} className="space-y-8">
+              {error && (
+                <Alert className="border-red-200 bg-red-50 shadow-sm">
+                  <AlertDescription className="text-red-800 font-medium">{error}</AlertDescription>
+                </Alert>
+              )}
 
-            {loading && uploadProgress > 0 && (
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span>Uploading...</span>
-                  <span>{uploadProgress}%</span>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div className="space-y-3">
+                  <Label htmlFor="title" className="text-lg font-semibold text-gray-700">
+                    Story Title
+                  </Label>
+                  <Input 
+                    id="title" 
+                    name="title" 
+                    value={form.title} 
+                    onChange={handleChange} 
+                    required 
+                    className="h-12 text-lg border-2 border-gray-200 focus:border-purple-500 transition-colors"
+                    placeholder="Enter your story title..."
+                  />
                 </div>
-                <Progress value={uploadProgress} className="w-full" />
+
+                <div className="space-y-3">
+                  <Label htmlFor="genre" className="text-lg font-semibold text-gray-700">
+                    Genre
+                  </Label>
+                  <Input 
+                    id="genre" 
+                    name="genre" 
+                    value={form.genre} 
+                    onChange={handleChange} 
+                    required 
+                    className="h-12 text-lg border-2 border-gray-200 focus:border-purple-500 transition-colors"
+                    placeholder="e.g., Fantasy, Romance, Mystery..."
+                  />
+                </div>
               </div>
-            )}
 
-            <div className="flex gap-3">
-              <Button 
-                type="submit" 
-                disabled={loading}
-                className="flex-1"
-              >
-                {loading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Uploading...
-                  </>
-                ) : (
-                  <>
-                    <Upload className="mr-2 h-4 w-4" />
-                    Upload Story
-                  </>
-                )}
-              </Button>
-              
-              <Button 
-                type="button" 
-                variant="outline"
-                onClick={() => {
-                  setForm({ title: '', genre: '', description: '' });
-                  setFile(null);
-                  setError('');
-                  document.getElementById('file-input').value = '';
-                }}
-                disabled={loading}
-              >
-                Clear All
-              </Button>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
+              <div className="space-y-3">
+                <Label htmlFor="description" className="text-lg font-semibold text-gray-700">
+                  Short Description
+                </Label>
+                <Input
+                  id="description"
+                  name="description"
+                  value={form.description}
+                  onChange={handleChange}
+                  required
+                  className="h-12 text-lg border-2 border-gray-200 focus:border-purple-500 transition-colors"
+                  placeholder="Write a compelling summary of your story..."
+                />
+              </div>
 
-      <div className="mt-8 p-4 bg-blue-50 rounded-lg">
-        <h3 className="font-semibold text-blue-900 mb-2">📝 Upload Guidelines</h3>
-        <ul className="text-sm text-blue-800 space-y-1">
-          <li>• Accepted formats: PDF, DOC, DOCX</li>
-          <li>• Maximum file size: 10MB</li>
-          <li>• Write an engaging description to attract readers</li>
-          <li>• Choose an appropriate genre for better discoverability</li>
-          <li>• Make sure your content follows community guidelines</li>
-        </ul>
+              <div className="space-y-3">
+                <Label htmlFor="content" className="text-lg font-semibold text-gray-700 flex items-center gap-2">
+                  <Sparkles className="h-5 w-5 text-purple-600" />
+                  Full Story
+                </Label>
+                <div className="border-2 border-gray-200 rounded-lg overflow-hidden focus-within:border-purple-500 transition-colors">
+                  <Editor
+                    id="content"
+                    apiKey={import.meta.env.VITE_TEXT_API_KEY}
+                    value={form.content}
+                    init={{
+                      height: 500,
+                      menubar: false,
+                      plugins: [
+                        'advlist autolink lists link charmap preview anchor',
+                        'searchreplace visualblocks code fullscreen',
+                        'insertdatetime media table paste help wordcount'
+                      ],
+                      toolbar:
+                        'undo redo | formatselect | bold italic underline | alignleft aligncenter alignright alignjustify | bullist numlist outdent indent | removeformat | help',
+                      content_style: 'body { font-family: -apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif; font-size:16px; line-height: 1.6; }'
+                    }}
+                    onEditorChange={handleEditorChange}
+                  />
+                </div>
+              </div>
+
+              <div className="pt-6">
+                <Button 
+                  type="submit" 
+                  className="w-full h-14 text-lg font-semibold bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 shadow-lg hover:shadow-xl transition-all duration-200" 
+                  disabled={loading}
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 className="mr-3 h-5 w-5 animate-spin" />
+                      Publishing Your Story...
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="mr-3 h-5 w-5" />
+                      Publish Story
+                    </>
+                  )}
+                </Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

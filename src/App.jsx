@@ -4,10 +4,11 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import Home from './pages/Home';
 import UploadStory from './pages/UploadStory';
-import Sidebar from './components/Sidebar';
 import SuggestionBox from './pages/SuggestionBox';
 import AdminSuggestions from './pages/AdminSuggestions';
 import ProtectedRoute from './components/ProtectedRoute';
+import Sidebar from './components/Sidebar';
+import StoryViewer from './pages/StoryViewer'; // ✅ NEW
 
 const App = () => {
   const location = useLocation();
@@ -19,7 +20,7 @@ const App = () => {
       <div className={`${!hideSidebar ? 'md:ml-64' : ''} transition-all duration-300`}>
         <Routes>
           {/* Public Routes */}
-          <Route path="/" element={<Navigate to="/login" />} />
+          <Route path="/" element={<Navigate to={localStorage.getItem('token') ? "/home" : "/login"} />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
 
@@ -53,6 +54,14 @@ const App = () => {
             element={
               <ProtectedRoute requiredRole="admin">
                 <AdminSuggestions />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/story/:id"
+            element={
+              <ProtectedRoute>
+                <StoryViewer />
               </ProtectedRoute>
             }
           />
