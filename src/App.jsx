@@ -18,7 +18,7 @@ const App = () => {
       {!hideSidebar && <Sidebar />}
       <div className={`${!hideSidebar ? 'md:ml-64' : ''} transition-all duration-300`}>
         <Routes>
-          <Route path="/" element={<Home />} />
+          <Route path="/" element={<Login />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route 
