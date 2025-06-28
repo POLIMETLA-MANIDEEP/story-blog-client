@@ -17,7 +17,7 @@ const Login = () => {
 
   const handleChange = e => {
     setForm({ ...form, [e.target.name]: e.target.value });
-    if (error) setError(''); // Clear error when user starts typing
+    if (error) setError('');
   };
 
   const handleSubmit = async e => {
@@ -37,7 +37,13 @@ const Login = () => {
 
       localStorage.setItem('token', res.data.token);
       localStorage.setItem('user', JSON.stringify(user));
-      navigate('/');
+
+      // 👉 Redirect based on role
+      if (user.role === 'admin') {
+        navigate('/admin/suggestions');
+      } else {
+        navigate('/home');
+      }
     } catch (err) {
       setError(err.response?.data?.message || 'Login failed');
     } finally {
@@ -47,7 +53,6 @@ const Login = () => {
 
   return (
     <div className="min-h-screen grid lg:grid-cols-2">
-      {/* Left: Login Form */}
       <div className="flex items-center justify-center p-6 lg:p-12">
         <div className="w-full max-w-md space-y-6">
           <div className="text-center">
@@ -161,7 +166,6 @@ const Login = () => {
         </div>
       </div>
 
-      {/* Right: Image */}
       <div 
         className="hidden lg:block bg-cover bg-center bg-gray-100"
         style={{ backgroundImage: "url('/login_image.jpeg')" }}
